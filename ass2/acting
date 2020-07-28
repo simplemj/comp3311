@@ -1,0 +1,87 @@
+#!/usr/bin/python3
+
+
+import sqlite3,sys
+
+if len(sys.argv) != 2 :
+  print("Usage:",sys.argv[0],"actors")
+  sys.exit(1)
+
+actors = sys.argv[1]
+
+con = sqlite3.connect('a2.db')
+
+query = """select m.title,director.name,m.year, m.content_rating, r.imdb_score from movie m 
+	left join director on director.id = m.director_id
+	join acting ac on m.id = ac.movie_id
+	join actor on actor.id = ac.actor_id
+	join rating r on r.movie_id = m.id
+	where upper(actor.name) = upper("{}")
+	order by m.year,m.title asc
+	"""
+cur = con.cursor()
+cur.execute(query.format(actors))
+i = 1
+flag = -1
+while True:
+  t = cur.fetchone()
+  if t == None:
+  	break
+  flag = 1
+  title,director,year,rating,score = t
+  if year == None:
+  	flag = 0
+  else:
+  	if director != None and rating != None and score != None:
+  		print(str(i) + '. {} -- {} ({}, {}, {:2.1f})'.format(title,director,year,rating,score))
+  	elif director == None and rating != None and score != None:
+  		print(str(i) + '. {} -- ({}, {}, {:2.1f})'.format(title,year,rating,score))
+  	elif director == None and rating == None and score != None:
+  		print(str(i) + '. {} -- ({}, {:2.1f})'.format(title,year,score))
+  	elif director == None and rating != None and score == None:
+  		print(str(i) + '. {} -- ({} {})'.format(title,year,rating))
+  	elif director != None and rating == None and score == None:
+  		print(str(i) + '. {} -- {} ({})'.format(title,director,year))
+  	elif director != None and rating != None and score == None:
+  		print(str(i) + '. {} -- {} ({}, {})'.format(title,director,year,rating))
+  	elif director != None and rating == None and score != None:
+  		print(str(i) + '. {} -- {} ({}, {:2.1f})'.format(title,director,year,score))
+  if flag == 1:
+  	i = i + 1
+
+query2 = """select m.title,director.name,m.year, m.content_rating, r.imdb_score from movie m 
+	left join director on director.id = m.director_id
+	join acting ac on m.id = ac.movie_id
+	join actor on actor.id = ac.actor_id
+	join rating r on r.movie_id = m.id
+	where upper(actor.name) = upper("{}") and m.year is null
+	order by m.title asc
+	"""
+cur2 = con.cursor()
+cur2.execute(query2.format(actors))
+
+while True:
+  t1 = cur2.fetchone()
+  if t1 == None:
+  	break
+  title,director,year,rating,score = t1
+  if director != None and rating != None and score != None:
+  	print(str(i) + '. {} -- {} ({}, {:2.1f})'.format(title,director,rating,score))
+  elif director != None and rating == None and score == None:
+  	print(str(i) + '. {} -- {}'.format(title,director))
+  elif director != None and rating != None and score == None:
+  	print(str(i) + '. {} -- {} ({})'.format(title,director,rating))
+  elif director != None and rating == None and score != None:
+  	print(str(i) + '. {} -- {} ({:2.1f})'.format(title,director,score))
+  elif director == None and rating != None and score != None:
+  	print(str(i) + '. {} -- ({}, {:2.1f})'.format(title,rating,score))
+  elif director == None and rating == None and score != None:
+  	print(str(i) + '. {} -- ({:2.1f})'.format(title,score))
+  elif director == None and rating != None and score == None:
+  	print(str(i) + '. {} -- ({})'.format(title,rating))
+  i = i + 1
+
+  
+
+con.close()
+

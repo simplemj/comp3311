@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+import sqlite3,sys
+
+if len(sys.argv) < 4:
+    print("Usage:",sys.argv[0],"genre or null and k startyear endyear")
+    sys.exit(1)
+elif len(sys.argv) == 4 and (int(sys.argv[1]) > 1000 or int(sys.argv[1]) < 1 or int(sys.argv[2]) > int(sys.argv[3]) or int(sys.argv[2]) < 1900 or int(sys.argv[3]) > 2020):
+    print("Out of range")
+    sys.exit(1)
+elif len(sys.argv) == 5 and (int(sys.argv[2]) > 1000 or int(sys.argv[2]) < 1 or int(sys.argv[3]) > int(sys.argv[4]) or int(sys.argv[3]) < 1900 or int(sys.argv[4]) > 2020):
+    print("Out of range")
+    sys.exit(1)
+elif len(sys.argv) == 4:
+    genre = None
+    k = sys.argv[1]
+    start = sys.argv[2]
+    end = sys.argv[3]
+elif len(sys.argv) == 5:
+    genre = sys.argv[1]
+    k = sys.argv[2]
+    start = sys.argv[3]
+    end = sys.argv[4]
+
+con = sqlite3.connect('a2.db')
+
+cur = con.cursor()
+cur2 = con.cursor()
+
+
+if genre is None:
+    query = """select m.title,m.year,m.content_rating,m.lang,r.imdb_score,r.num_voted_users from movie m
+        join genre g on m.id = g.movie_id 
+        join rating r on r.movie_id = m.id
+        where m.year >= {} and m.year <= {} and m.year is not null
+        group by m.id
+        order by r.imdb_score desc, r.num_voted_users desc
+        limit {}
+    """
+    cur.execute(query.format(start,end,k))
+
+    for i, t in enumerate(cur.fetchall()):
+        title, year, rating, lang, score, vote = t
+        if rating != None and lang == None:
+            res = "{}. {} ({}, {}) [{:2.1f}, {}]".format((i+1),title,year,rating,score,vote)
+        elif rating == None and lang != None:
+            res = "{}. {} ({}, {}) [{:2.1f}, {}]".format((i+1),title,year,lang,score,vote)
+        elif rating != None and lang != None:
+            res = "{}. {} ({}, {}, {}) [{:2.1f}, {}]".format((i+1),title,year,rating,lang,score,vote)
+        print(res)
+
+else:
+    separate = genre.split("&")
+    search = "having "
+    for i, j in enumerate(separate):
+        if i != 0:
+            search = search + "and "
+        search = '{}group_concat(g.genre) like "%{}%" '.format(search,j)
+    
+    query = """select m.title,m.year,m.content_rating,m.lang,r.imdb_score,r.num_voted_users from movie m
+        join genre g on m.id = g.movie_id 
+        join rating r on r.movie_id = m.id
+        where m.year >= {} and m.year <= {} and m.year is not null
+        group by m.id
+        {}
+        order by r.imdb_score desc, r.num_voted_users desc
+        limit {}
+    """
+    cur2.execute(query.format(start,end,search,k))
+
+    for i, t in enumerate(cur2.fetchall()):
+        title, year, rating, lang, score, vote = t
+        if rating != None and lang == None:
+            res = "{}. {} ({}, {}) [{:2.1f}, {}]".format((i+1),title,year,rating,score,vote)
+        elif rating == None and lang != None:
+            res = "{}. {} ({}, {}) [{:2.1f}, {}]".format((i+1),title,year,lang,score,vote)
+        elif rating != None and lang != None:
+            res = "{}. {} ({}, {}, {}) [{:2.1f}, {}]".format((i+1),title,year,rating,lang,score,vote)
+        print(res)
+
+con.close()
+
+
+
+
+
+
+
+
+
+
+

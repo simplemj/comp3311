@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+
+import sqlite3,sys
+
+if (len(sys.argv) == 3):
+  similartitle = sys.argv[1] 
+  n = sys.argv[2]
+else:
+  print("Usage:",sys.argv[0],"title n")
+  sys.exit(1)
+
+
+con = sqlite3.connect('a2.db')
+cur = con.cursor()
+
+query = """select m.title, m.year, tmp2.similar_num, tmp1.similar_num, r.imdb_score, r.num_voted_users from movie m
+join rating r on m.id = r.movie_id
+left join (select tmp1_keywords2.movie_id, count(distinct tmp1_keywords1.keyword) as similar_num from keyword tmp1_keywords1 
+join movie tmp1_m ON (tmp1_m.id = tmp1_keywords1.movie_id) 
+join keyword tmp1_keywords2 on (tmp1_keywords1.keyword = tmp1_keywords2.keyword) 
+where upper(tmp1_m.title) = upper("{}") 
+group by tmp1_keywords1.movie_id, tmp1_keywords2.movie_id) 
+tmp1 on (m.id = tmp1.movie_id)
+join (select tmp2_genre2.movie_id, count(distinct tmp2_genre1.genre) as similar_num from genre tmp2_genre1 
+join movie tmp2_m on tmp2_genre1.movie_id = tmp2_m.id
+join genre tmp2_genre2 on tmp2_genre1.genre = tmp2_genre2.genre 
+where upper(tmp2_m.title) = upper("{}")
+group by tmp2_genre1.movie_id, tmp2_genre2.movie_id)
+tmp2 on tmp2.movie_id = m.id
+where tmp2.similar_num > 0  and upper(m.title) != upper("{}")
+order by tmp2.similar_num desc, tmp1.similar_num desc, tmp1.similar_num desc, r.imdb_score desc, r.num_voted_users desc limit {}
+"""
+
+cur.execute(query.format(similartitle, similartitle,similartitle,n))
+
+zero = "0"
+for i, t in enumerate(cur.fetchall()):
+    title, year, similar, keywords, score, votes = t
+    if year == None and keywords != None:
+      res = "{}. {} [{}, {}, {:2.1f}, {}]".format((i+1),title,similar,keywords,score,votes)
+    elif keywords == None and year != None:
+      res = "{}. {} ({}) [{}, {}, {:2.1f}, {}]".format((i+1),title,year,similar,zero,score,votes)
+    elif year == None and keywords == None:
+      res = "{}. {} [{}, {}, {:2.1f}, {}]".format((i+1),title,similar,zero,score,votes)
+    else:
+        res = "{}. {} ({}) [{}, {}, {:2.1f}, {}]".format((i+1),title,year,similar,keywords,score,votes)
+    print(res)
+con.close()
